@@ -116,3 +116,28 @@
   b1 设 bootargs；b2 读内核；b3 读盘；b4 双地址 bootm。+serverip 一并 saveenv。
 - 验收（`boot` 后全程无人值守）：hook→agent→LuCI→扫荡；br0 五成员；
   pc 缺席；浏览器 0 pageerror。断电自恢复成立，刷机之旅结束。
+
+---
+
+# 续写 09-05（ supervisory 战争：pc 定案、TX 中断、v2 回滚）
+- **pc 定案为莫名重启元凶（后又存疑，见下）**：binary 含 `reboot`；pc 死后曾 38 分钟
+  零重启；但随后在 pc 缺席的新启动中仍观测到自发重启一次——归因降级为"强嫌疑，
+  未实锤"。另：`ps` 里找 pc 必须用短名 grep（comm 列是 `pc`），之前数次误报"缺席"。
+- **TX 中断事件**：串口能收不能发，定位到 USB 适配器 OUT 端 wedged（目标重启时的
+  电气毛刺）。修复：重拔 USB + proxy 重启 + 关 host 侧 autosuspend；proxy 已加
+  写失败自动重连。另：U-Boot 抓取屡败后改规矩——要进 U-Boot 直接喊人，几秒钟的事。
+- **v2（pc/java stub）回滚**：开局 stub pc 导致 cspd 子树永不出生，br0 空壳无成员、
+  switch 无配置，LAN 全灭。结论：**pc 必须活过 LAN 构建期**（约 2 分钟），再杀。
+  v1（hook-only 盘）+ agent（br0 carrier 等待 + 延迟扫荡）为最终形态。
+- **cspd 行为学**：`PcStartProgram` 系列——cspd 自身不 fork helper，一律发消息让 pc 代劳；
+  pc 死后 cspd 的 VOIP/TR069 IFS 每 30 秒重试（PON 无上行则永不成功，但不影响已建 LAN）。
+  br0 成员/switch VLAN 由 cspd 在 LAN 构建期配好，之后 cspd 可杀（已验证 10 分钟+ 无影响）。
+- **串口 pid 仪表盘**：`agent/services/S05-serial-ps` 每 5 秒刷表并重申 `printk=1`
+  （串口登录会把内核日志提到 DEBUG，自愈）。终态串口仅剩仪表盘自刷（~180B/s）。
+- **四波杀到 pid 表**（init/getty/telnetd/dnsmasq/agent/ubusd/rpcd/h10e-ubus/lighttpd，
+  +sleep/watchdog）：osgid/java/phoneapp/vodsl → eaServer/ctsgw/dmplatform/starnet/
+  simulation/nethack → vsftpd/smbd/udpsvd/l2tp/ipsec/portmap → cspd；延迟大扫荡
+  （360 秒）已进 `agent-boot.sh`，下次启动自动收敛。
+- **未闭环**：自发重启出现过 pc 缺席启动中的一例，元凶待定（audit/upgrade/pc 三方
+  皆有嫌疑，无实锤）；`uci` 对象缺失（LuCI 不用）；P0 踢人需在线 STA；
+  cloudflared 按 S20 规范接入；soak 从未完整跑完。
