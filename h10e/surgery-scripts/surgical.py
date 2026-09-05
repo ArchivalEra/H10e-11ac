@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Surgical rcS patch: replace stock comment block (lines 98-101, 111B) with
-agent trampoline of EXACT same length. Total archive length unchanged."""
+agent trampoline of EXACT same length. Total archive length unchanged.
+Usage: SURGICAL_WRITE=1 python3 surgical.py  # emit newinit2.cpio for rebuild.sh;
+       default (unset) only analyzes, per analysis-record convention."""
 import gzip
+import os
 import sys
 
 W = '/tmp/h10e-test2'
@@ -47,6 +50,7 @@ newrcs = rcs[:ri] + repl + rcs[ri + RLEN:]
 assert len(newrcs) == 17842
 newdec = dec[:dataoff] + newrcs + dec[dataoff + filesize:]
 assert len(newdec) == len(dec)
-# write-out disabled: superseded by rebuild.sh flow (kept as analysis record)
-print('spliced archive len:', len(newdec), '(unchanged, write-out disabled)')
+if os.environ.get('SURGICAL_WRITE'):
+    open(W + '/newinit2.cpio', 'wb').write(newdec)
+    print('wrote', W + '/newinit2.cpio')
 print('spliced archive len:', len(newdec), '(unchanged)')

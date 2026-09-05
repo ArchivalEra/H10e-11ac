@@ -72,7 +72,7 @@ TS_UPwd=（明文，即 telnet 密码）
 
 当时规划的路线（均未走到，因为出厂明文默认值直接命中）：
 - A：cspd 单用户跑起来 dump 堆搜 `DevAuthInfo`
-- B：zxic login 的 root DES 哈希 `QTu5DMlwYapGg`（/etc/passwd）john 弱口令——⚠️ 实测 `crypt("root")` ≠ 该哈希，明文 09-02~04 会话由另一 agent 破译（用于 `su` 提权，值脱敏）
+- B：zxic login 的 root DES 哈希 `QTu5DMlwYapGg`（/etc/passwd）john 弱口令——⚠️ 实测 `crypt("root")` ≠ 该哈希；su 口令来源待考（09-02~09-04 会话继承为已知量，未见破译过程），值脱敏
 - C：ImmortalWrt 移植（以月计，放弃）
 - D：web 隐藏页 `telnetCfg_gch.gch`（超管权限才能开 telnet，拿到超密后可固化）
 
@@ -89,3 +89,11 @@ TS_UPwd=（明文，即 telnet 密码）
 ## 6. 一句话复盘
 
 **四步绝杀进 root → kernel1 dump 双层解包出明文出厂配置 → TelnetCfg 给网络侧持久 shell、DevAuthInfo 给管理面夺权**——全程不需要碰 AES 活配置；"出厂默认随固件明文分发且未被改"是这个机型凭证体系的最大软肋。
+
+## 7. 09-04 复核注记（另一 agent 独立测量，仅记录差异，不改原文）
+- 外层：`0x6834 - 0x220(SGU 头) = 0x6614`，与 §1 完全咬合；stage1 均为 35,734,880B。
+- 内层：§1 写 stage1 内偏移 `0x7BD40F`、cpio 66,859,881B；而 09-02 后镜像三次独立
+  xref（含 splice 往返 + cpio 解析 2091 条目 + rcS md5 与 live 机一致）均为
+  `0x7BD448`、68,535,296B。相差 57B / 1.7MB。
+- 推测：8/30 dump 与 9/02+ 镜像本就不是同一版固件（中间经历 v12/v13 刷机与两次救砖
+  还原），两边可能都对。实锤方法：比一下各自 stage1 的 md5；不同版本各记各的偏移即可，用时先对 md5。
