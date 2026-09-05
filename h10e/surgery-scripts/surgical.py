@@ -5,7 +5,7 @@ import gzip
 import sys
 
 W = '/tmp/h10e-test2'
-dec = gzip.decompress(open(W + '/stock-cpio.gz', 'rb').read())
+dec = gzip.decompress(open('/tmp/h10e-test2/stock-cpio.gz', 'rb').read())
 print('stock archive len:', len(dec))
 
 # locate etc/init.d/rcS entry by walking newc entries (avoids false hits in data)
@@ -47,5 +47,6 @@ newrcs = rcs[:ri] + repl + rcs[ri + RLEN:]
 assert len(newrcs) == 17842
 newdec = dec[:dataoff] + newrcs + dec[dataoff + filesize:]
 assert len(newdec) == len(dec)
-open(W + '/newinit2.cpio', 'wb').write(newdec)
+# write-out disabled: superseded by rebuild.sh flow (kept as analysis record)
+print('spliced archive len:', len(newdec), '(unchanged, write-out disabled)')
 print('spliced archive len:', len(newdec), '(unchanged)')
