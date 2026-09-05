@@ -1,0 +1,16 @@
+#!/bin/sh
+# S05-serial-ps: serial dashboard - compact pid table to console every 5s.
+# also re-asserts printk=1 each round (serial logins raise it to DEBUG!).
+MARK=/tmp/sershow.run
+case "$1" in
+  start)
+    touch $MARK
+    ( while [ -f $MARK ]; do
+        echo 1 > /proc/sys/kernel/printk 2>/dev/null
+        { echo "===== $(date '+%m-%d %H:%M:%S') up $(cut -d' ' -f1 /proc/uptime | cut -d. -f1)s free $(awk '/MemFree:/{print $2}' /proc/meminfo)KB"; ps | grep -v "\[" | head -n 20; } > /dev/console 2>&1
+        sleep 5
+      done ) &
+    echo started ;;
+  stop) rm -f $MARK; echo stopped ;;
+  check) test -f $MARK ;;
+esac

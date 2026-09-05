@@ -85,3 +85,26 @@
 - 安静：`ps` 里 PID 817 的 "cspd" 实为 `/bin/pc`（argv 伪装）；pc 已杀且不影响
   telnet/网络；printk=1 持久化；java 由 osgid 约 3 分钟拉起，稳态只剩涓流。
 - 缺口：`uci` 对象缺失（LuCI 不用）；soak 未补跑；P0 需在线 STA；cloudflared 待定。
+
+---
+
+# 续写 09-05（收官：三禁 + pid 仪表盘 + boot 自启动）
+- **pc 定案为莫名重启元凶**：`ps` 里 PID 817 的 "cspd" 实为 `/bin/pc`（argv 伪装，
+  查 `grep` 要用短名）；binary 含 `reboot`；pc 死后 38 分钟零重启（之前约 10 分钟一次）。
+  教训：`reboot` 前必须 KDE 通知用户（kdialog），且每次只串行操作（telnetd maxcon=2）。
+- **正确顺序（血泪）**：pc 是全用户态的"产婆"（cspd 及 LAN 配置经它之手），
+  开局 stub 必断网；正解 = v1（hook-only 盘）放行，等 br0 carrier 后 agent 再杀。
+  `agent-boot.sh` 等的是 carrier（非存在），`agent.sh` 启动时只杀 java 保内存，
+  pc/osgid 进 300 秒延迟扫荡 + 看门狗每轮补刀 pc。
+- **四波杀到 pid 表**：osgid/java/phoneapp/vodsl → eaServer/ctsgw/dmplatform/starnet/
+  simulation/nethack → vsftpd/smbd/udpsvd/l2tp/ipsec/portmap → cspd；每波验 LAN+LuCI。
+  终态用户态仅剩 init/getty/telnetd/dnsmasq/agent/ubusd/rpcd/h10e-ubus/lighttpd。
+  延迟大扫荡（360 秒）已进 `agent-boot.sh`，下次启动自动收敛。
+- **串口 pid 仪表盘**：`agent/services/S05-serial-ps` 每 5 秒向 console 刷表，
+  每轮先 `printk=1`（串口登录会把内核日志提到 DEBUG，此为自愈）。
+- **boot 自启动**（lab）：U-Boot `bootcmd` 置为 NAND 读内核 + TFTP 取盘，
+  成功则双地址 `bootm`，失败回落原厂单启动；`serverip` 一并 saveenv。
+  全程无人值守验证通过（hook→agent→LuCI→扫荡，无需手动）。
+- 杂项：TX 中断定为 USB 适配器 OUT 端 wedged（重拔+proxy 重启+关 autosuspend 解决；
+  proxy 已加写失败自动重连）；`reboot` 一律用 `reboot -f`（优雅关机会被 D 状态卡死）；
+  NO_AGENT/NO_LUCI 双门常闭检查通过。

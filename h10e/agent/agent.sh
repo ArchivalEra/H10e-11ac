@@ -25,13 +25,16 @@ case "$1" in
     exit 0 ;;
 esac
 log "boot: starting enabled services"
-killall -9 pc java cpulimit 2>/dev/null; log "boot: blacklist swept (pc/java/cpulimit)"
+killall -9 java cpulimit 2>/dev/null; log "boot: early sweep (java/cpulimit, protect provision RAM)"
 for s in $(ls $S/S* 2>/dev/null); do
   [ -x "$s" ] || continue
   log "start $s"; "$s" start >>"$L/$(basename $s).log" 2>&1 &
 done
 wait
 log "all started; watchdog armed (60s)"
+# delayed pc+osgid kill: pc must live through LAN build (~mins), then die
+# (else: reboot escalation + supervision). orphans keep running; nothing respawns.
+( sleep 300; killall -9 pc osgid 2>/dev/null && log "delayed sweep: pc/osgid down" ) &
 while :; do sleep 60
   [ -f /userconfig/NO_AGENT ] && { log "killed by NO_AGENT"; exit 0; }
   killall -9 pc 2>/dev/null && log "watchdog: pc suppressed"
