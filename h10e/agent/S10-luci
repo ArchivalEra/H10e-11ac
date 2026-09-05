@@ -1,0 +1,11 @@
+#!/bin/sh
+# S10-luci: provision LuCI:80 stack (full idempotent run; ~40s).
+# future services: copy this pattern (S20-cloudflared, ...). chmod -x = disable.
+U=/var/iw/bin/ubus; SOCK=/var/run/ubus/ubus.sock
+case "$1" in
+  start) sh /userconfig/luci80_boot.sh ;;
+  stop) killall lighttpd rpcd ubusd h10e-ubus 2>/dev/null ;;
+  check)
+    LD_LIBRARY_PATH=/var/iw/lib $U -s $SOCK list 2>/dev/null | grep -q '^luci$' \
+      && pidof lighttpd >/dev/null 2>&1 ;;
+esac
