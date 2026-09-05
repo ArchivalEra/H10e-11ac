@@ -108,3 +108,11 @@
 - 杂项：TX 中断定为 USB 适配器 OUT 端 wedged（重拔+proxy 重启+关 autosuspend 解决；
   proxy 已加写失败自动重连）；`reboot` 一律用 `reboot -f`（优雅关机会被 D 状态卡死）；
   NO_AGENT/NO_LUCI 双门常闭检查通过。
+
+## 09-05 收官验证（无人值守启动打通）
+- 外挂盘永久家：`mini-ramdisk.uimg`（4657B）一次写入 kernel1 尾部 slack
+  （NAND 0x4000000，2MB 全 FF 区，免擦除直写，read-back cmp 校验通过）。
+- 最终 bootcmd（`run b1 b2 b3 b4` 链，规避 16 参数上限与无 `if` 解析器）：
+  b1 设 bootargs；b2 读内核；b3 读盘；b4 双地址 bootm。+serverip 一并 saveenv。
+- 验收（`boot` 后全程无人值守）：hook→agent→LuCI→扫荡；br0 五成员；
+  pc 缺席；浏览器 0 pageerror。断电自恢复成立，刷机之旅结束。
